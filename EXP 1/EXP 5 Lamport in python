@@ -1,0 +1,76 @@
+from multiprocessing import Process, Pipe
+from os import getpid
+from datetime import datetime
+
+# Function to print local time and Lamport timestamp
+def local_time(counter):
+    return ' (LAMPORT_TIME={}, LOCAL_TIME={})'.format(counter, datetime.now())
+
+# Function to calculate the received timestamp (Lamport logical clock rule)
+def calc_recv_timestamp(recv_time_stamp, counter):
+    return max(recv_time_stamp, counter) + 1
+
+# Function to simulate an event happening in a process
+def event(pid, counter):
+    counter += 1
+    print('Event happened in {} !'.format(pid) + local_time(counter))
+    return counter
+
+# Function to send a message through the pipe
+def send_message(pipe, pid, counter):
+    counter += 1
+    pipe.send(('Empty shell', counter))
+    print('Message sent from ' + str(pid) + local_time(counter))
+    return counter
+
+# Function to receive a message through the pipe
+def recv_message(pipe, pid, counter):
+    message, timestamp = pipe.recv()
+    counter = calc_recv_timestamp(timestamp, counter)
+    print('Message received at ' + str(pid) + local_time(counter))
+    return counter
+
+# Process 1
+def process_one(pipe12):
+    pid = getpid()
+    counter = 0
+    counter = event(pid, counter)
+    counter = send_message(pipe12, pid, counter)
+    counter = event(pid, counter)
+    counter = recv_message(pipe12, pid, counter)
+    counter = event(pid, counter)
+
+# Process 2
+def process_two(pipe21, pipe23):
+    pid = getpid()
+    counter = 0
+    counter = recv_message(pipe21, pid, counter)
+    counter = send_message(pipe21, pid, counter)
+    counter = send_message(pipe23, pid, counter)
+    counter = recv_message(pipe23, pid, counter)
+
+# Process 3
+def process_three(pipe32):
+    pid = getpid()
+    counter = 0
+    counter = recv_message(pipe32, pid, counter)
+    counter = send_message(pipe32, pid, counter)
+
+if __name__ == '__main__':
+    # Create pipes for inter-process communication
+    oneandtwo, twoandone = Pipe()
+    twoandthree, threeandtwo = Pipe()
+
+    # Create and start the processes
+    process1 = Process(target=process_one, args=(oneandtwo,))
+    process2 = Process(target=process_two, args=(twoandone, twoandthree))
+    process3 = Process(target=process_three, args=(threeandtwo,))
+
+    process1.start()
+    process2.start()
+    process3.start()
+
+    # Wait for processes to finish
+    process1.join()
+    process2.join()
+    process3.join()
