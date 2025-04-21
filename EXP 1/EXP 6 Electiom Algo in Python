@@ -1,0 +1,34 @@
+# simple_bully.py
+
+# simple_bully.py
+
+import random
+
+n = 8  # total processes
+processes = list(range(n))
+failed = 7  # simulate failure of process 7
+initiator = 4
+
+print(f"No of processes {n}")
+print(f"Process no {failed} fails")
+
+# Remove the failed process
+active = [p for p in processes if p != failed]
+
+print(f"Election Initiated by {initiator}")
+
+# Send election messages
+for i in range(initiator + 1, n):
+    if i in active:
+        print(f"Process {initiator} pass Election({initiator}) to{i}")
+
+# Highest active process becomes coordinator
+coordinator = max(active)
+print(f"Process {coordinator} becomes coordinator")
+
+# Coordinator sends message to others
+for p in active:
+    if p != coordinator:
+        print(f"Process {coordinator} pass Coordinator({coordinator}) message to process {p}")
+
+print("End Of Election")
